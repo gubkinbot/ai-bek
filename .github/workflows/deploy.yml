@@ -28,7 +28,7 @@ jobs:
           SSH_PORT:     ${{ secrets.SSH_PORT }}
         run: |
           TARGET_DIR="/var/www/www-***/python-opc-api"
-          
+
           sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -p "${SSH_PORT:-22}" \
             "$SSH_USER@$SSH_HOST" "mkdir -p $TARGET_DIR"
 
@@ -86,7 +86,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y sshpass
 
-        sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+        sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'EOF'
           set -e
           sudo apt-get update
           sudo apt-get install -y python3.12-venv python3-pip postgresql-client nginx git
@@ -102,7 +102,7 @@ jobs:
           After=network.target
 
           [Service]
-          User=${{ secrets.SSH_USER }}
+          User=${{ secrets.SSH_USERNAME }}
           WorkingDirectory=/var/www/gas_monitor
           EnvironmentFile=/var/www/gas_monitor/.env
           ExecStart=/var/www/gas_monitor/venv/bin/gunicorn --access-logfile - --workers 3 gas_monitor.wsgi:application
@@ -134,7 +134,7 @@ jobs:
           sudo ln -sf /etc/nginx/sites-available/gas_monitor /etc/nginx/sites-enabled/
           sudo nginx -t && sudo systemctl reload nginx
 
-          cat << 'DEPLOY' > /home/${{ secrets.SSH_USER }}/deploy.sh
+          cat << 'DEPLOY' > /home/${{ secrets.SSH_USERNAME }}/deploy.sh
           #!/usr/bin/env bash
           set -e
           cd /var/www/gas_monitor
@@ -154,7 +154,7 @@ jobs:
           sudo systemctl restart gas_monitor
           DEPLOY
 
-          chmod +x /home/${{ secrets.SSH_USER }}/deploy.sh
+          chmod +x /home/${{ secrets.SSH_USERNAME }}/deploy.sh
         EOF
 
     # === Шаг 2: копирование кода через scp ===
