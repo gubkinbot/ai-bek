@@ -27,8 +27,13 @@ jobs:
           SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
           SSH_PORT:     ${{ secrets.SSH_PORT }}
         run: |
-          sshpass -p "$SSH_PASSWORD" scp -o StrictHostKeyChecking=no \
-            -P ${SSH_PORT:-22} ./* $SSH_USER@$SSH_HOST:/var/www/www-root/python-opc-api/
+          sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -p ${SSH_PORT:-22} \
+            $SSH_USER@$SSH_HOST "mkdir -p /var/www/www-***/python-opc-api && tar -xzf - -C /var/www/www-***/python-opc-api"
+
+          tar --exclude='./gas_monitor' -czf - . | \
+            sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -p ${SSH_PORT:-22} \
+                $SSH_USER@$SSH_HOST "tar -xzf - -C /var/www/www-***/python-opc-api"
+
 
       # 4. Устанавливаем зависимости и запускаем скрипт на сервере
       - name: Install deps & run service via password
@@ -58,6 +63,9 @@ jobs:
           EOF
   deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gas_monitor
 
     steps:
     - name: Checkout code
