@@ -56,7 +56,7 @@ jobs:
             # 3) Запускаем ваш сервис в фоне
             nohup python3 run_services.py > run_services.log 2>&1 &
           EOF
-    deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -80,7 +80,7 @@ jobs:
         sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
           set -e
           sudo apt-get update
-          sudo apt-get install -y python3.10-venv python3-pip postgresql-client nginx git
+          sudo apt-get install -y python3.12-venv python3-pip postgresql-client nginx git
 
           sudo mkdir -p /var/www/gas_monitor
           sudo chown $USER:$USER /var/www/gas_monitor
