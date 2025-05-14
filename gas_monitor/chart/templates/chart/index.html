@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Мониторинг дебита газа | UNG Hackathon 2025</title>
+  <!-- Chart.js и плагин аннотаций -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.3.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+
+  <style>
+    /* === ваши стили из последнего рабочего шаблона === */
+    :root {
+      --primary-color: #1a73e8;
+      --primary-dark: #174ea6;
+      --secondary-color: #80868b;
+      --success-color: #0f9d58;
+      --warning-color: #f9ab00;
+      --danger-color: #ea4335;
+      --light-bg: #f8f9fa;
+      --card-bg: #ffffff;
+      --border-radius: 10px;
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+      --transition: all 0.25s ease;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--light-bg); color:#202124; line-height:1.5;
+    }
+    .container { max-width:1280px; margin:0 auto; padding:20px; }
+    .header {
+      padding:24px 0; margin-bottom:24px; position:relative; overflow:hidden;
+      background:linear-gradient(135deg,#0d47a1,#42a5f5);
+      border-radius:var(--border-radius); color:#fff; box-shadow:var(--shadow-md);
+    }
+    .header__content { text-align:center; position:relative; z-index:1; }
+    .header__title { font-size:28px; font-weight:600; margin-bottom:4px; }
+    .header__subtitle { font-size:16px; opacity:0.9; }
+    .dashboard {
+      display:grid; grid-template-columns: minmax(0,1fr) minmax(0,2fr);
+      gap:24px; margin-bottom:24px;
+    }
+    .card {
+      background:var(--card-bg); border-radius:var(--border-radius);
+      box-shadow:var(--shadow-md); transition:var(--transition);
+      overflow:hidden; display:flex; flex-direction:column;
+    }
+    .card:hover { box-shadow:var(--shadow-lg); transform:translateY(-2px); }
+    .card__header {
+      display:flex; align-items:center; padding:16px 20px;
+      background:rgba(0,0,0,0.02); border-bottom:1px solid rgba(0,0,0,0.05);
+    }
+    .card__icon { margin-right:12px; color:var(--primary-color); }
+    .card__title { font-size:16px; font-weight:500; color:#5f6368; }
+    .card__body {
+      padding:20px; flex:1; display:flex; flex-direction:column;
+    }
+
+    /* Форма комментариев */
+    #commentForm { margin-bottom:16px; }
+    #commentForm textarea {
+      width:100%; padding:8px; border:1px solid #dadce0; border-radius:6px;
+      resize:vertical; margin-bottom:8px; font-size:14px; min-height:60px;
+    }
+    #commentForm button {
+      background:var(--primary-color); color:#fff; padding:8px 16px;
+      border:none; border-radius:6px; cursor:pointer; transition:var(--transition);
+      align-self:flex-end;
+    }
+    #commentForm button:hover { background:var(--primary-dark); }
+    .comments-list {
+      list-style:none; flex:1; overflow-y:auto; margin:0; padding:0;
+    }
+    .comments-list li {
+      padding:12px 0; border-bottom:1px solid #f1f3f4;
+    }
+    .comments-list time {
+      display:block; font-size:12px; color:#5f6368; margin-bottom:4px;
+    }
+
+    /* График и кнопка */
+    .chart-container { height:400px; width:100%; }
+    #replayBtn {
+      margin-bottom:12px;
+      background:var(--primary-color); color:#fff; border:none;
+      padding:8px 16px; border-radius:6px; cursor:pointer;
+      transition:var(--transition);
+    }
+    #replayBtn:disabled {
+      background:var(--secondary-color);
+      cursor: not-allowed;
+    }
+
+    /* Статистика */
+    .stats-grid {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:24px;
+      margin-bottom:24px;
+    }
+    .stat-card {
+      text-align:center; padding:24px;
+      display:flex; flex-direction:column; justify-content:center;
+    }
+    .stat-card__value {
+      font-size:32px; font-weight:500; margin-bottom:8px; line-height:1.2;
+    }
+    .stat-card__label { color:#5f6368; font-size:14px; }
+    .stat-card--current .stat-card__value { color:var(--primary-color); }
+    .stat-card--average .stat-card__value { color:var(--success-color); }
+    .stat-card--max .stat-card__value { color:var(--danger-color); }
+
+    /* Footer */
+    .footer {
+      margin-top:15px; background:#234876; color:#fff; padding:16px 0;
+      border-radius:var(--border-radius); box-shadow:var(--shadow-md);
+    }
+    .footer__content {
+      display:flex; align-items:center; justify-content:center; font-size:15px;
+    }
+    .footer__company { font-weight:600; margin-left:5px; }
+
+    @media (max-width:992px){ .dashboard{grid-template-columns:1fr;} }
+    @media (max-width:768px){ .stats-grid{grid-template-columns:1fr;} }
+    @media (max-width:576px){
+      .container{padding:12px;} .header{border-radius:0;}
+      .dashboard, .stats-grid{gap:16px;} .card__body{padding:16px;}
+      .header__title{font-size:24px;} .footer__content{flex-direction:column;}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header__content">
+        <h1 class="header__title">Текущий дебит газа</h1>
+        <div class="header__subtitle">Мониторинг данных и комментариев</div>
+      </div>
+    </header>
+
+    <div class="dashboard">
+      <!-- Комментарии -->
+      <div class="card">
+        <div class="card__header">
+          <div class="card__icon"><i class="fas fa-comments"></i></div>
+          <h2 class="card__title">Комментарии</h2>
+        </div>
+        <div class="card__body">
+          <form id="commentForm">
+            <textarea id="commentInput" placeholder="Введите комментарий..."></textarea>
+            <button type="submit"><i class="fas fa-paper-plane"></i> Отправить</button>
+          </form>
+          <ul class="comments-list" id="commentsList"></ul>
+        </div>
+      </div>
+
+      <!-- График -->
+      <div class="card">
+        <div class="card__header">
+          <div class="card__icon"><i class="fas fa-chart-line"></i></div>
+          <h2 class="card__title">График дебита газа</h2>
+        </div>
+        <div class="card__body">
+          <!-- кнопка для анимации -->
+          <button id="replayBtn">Расчет</button>
+          <div class="chart-container">
+            <canvas id="gasFlowChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-grid">
+      <div class="card stat-card stat-card--current">
+        <div class="stat-card__value" id="currentValue">0.00</div>
+        <div class="stat-card__label">Текущий дебит</div>
+      </div>
+      <div class="card stat-card stat-card--average">
+        <div class="stat-card__value" id="averageValue">0.00</div>
+        <div class="stat-card__label">Средний дебит</div>
+      </div>
+      <div class="card stat-card stat-card--max">
+        <div class="stat-card__value" id="maxValue">0.00</div>
+        <div class="stat-card__label">Максимальный дебит</div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="footer__content">
+        UNG Hackathon 2025 | Команда <span class="footer__company">LUKOIL Uzbekistan Operating Company</span>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      Chart.register(ChartAnnotation);
+
+      // инициализация графика
+      const ctx = document.getElementById('gasFlowChart').getContext('2d');
+      const gasChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Факт',
+              data: [],
+              borderColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color'),
+              borderWidth: 3,
+              tension: 0.4,
+              fill: false,
+              pointRadius: 0
+            },
+            {
+              label: 'План',
+              data: [],
+              borderColor: getComputedStyle(document.documentElement).getPropertyValue('--secondary-color'),
+              borderWidth: 3,
+              tension: 0.4,
+              fill: false,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              type: 'time',
+              time: { parser: 'isoDateTime', tooltipFormat: 'YYYY-MM-DD HH:mm:ss' },
+              grid: { display: false },
+              ticks: { color: '#5f6368' }
+            },
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(0,0,0,0.04)' },
+              ticks: { color: '#5f6368' },
+              title: {
+                display: true,
+                text: 'Дебит газа (тыс. м³/сутки)',
+                color: '#5f6368',
+                font: { size: 13 }
+              }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: { label: ctx => `Дебит: ${ctx.raw.toFixed(2)}` }
+            },
+            annotation: { annotations: {} }
+          }
+        }
+      });
+
+      // вспомогательные функции для статистики
+      function animateValue(id, start, end, duration) {
+        const el = document.getElementById(id);
+        const startTime = performance.now();
+        function frame(now) {
+          const progress = Math.min((now - startTime) / duration, 1);
+          const value = start + (end - start) * progress;
+          el.textContent = value.toFixed(2);
+          if (progress < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+      function updateStatistics(data) {
+        const curr = data.length ? data[data.length-1] : 0;
+        const avg  = data.length ? data.reduce((a,b)=>a+b)/data.length : 0;
+        const mx   = data.length ? Math.max(...data) : 0;
+        animateValue('currentValue', parseFloat(document.getElementById('currentValue').textContent), curr, 500);
+        animateValue('averageValue', parseFloat(document.getElementById('averageValue').textContent), avg, 500);
+        animateValue('maxValue', parseFloat(document.getElementById('maxValue').textContent), mx, 500);
+      }
+
+      // загрузка и отображение комментариев + обновление графика без анимации
+      async function updateData() {
+        try {
+          const [rRes, aRes] = await Promise.all([
+            fetch('/api/records/'),
+            fetch('/api/annotations/')
+          ]);
+          const records = await rRes.json();
+          const anns     = await aRes.json();
+
+          // обычное обновление графика
+          gasChart.data.labels = records.map(r=>r.datetime);
+          gasChart.data.datasets[0].data = records.map(r=>r.gas_rate_fact);
+          gasChart.data.datasets[1].data = records.map(r=>r.gas_rate_plan);
+
+          // аннотации
+          const obj = {};
+          anns.forEach((ann,i)=>{
+            obj['a'+i] = {
+              type:'line', scaleID:'x', value:ann.timestamp,
+              borderColor:getComputedStyle(document.documentElement).getPropertyValue('--success-color'),
+              borderWidth:1,
+              label:{ enabled:true, content:ann.text, position:'end', yAdjust:10, font:{size:12} }
+            };
+          });
+          gasChart.options.plugins.annotation.annotations = obj;
+          gasChart.update();
+
+          // список комментариев
+          const list = document.getElementById('commentsList');
+          list.innerHTML = '';
+          anns.forEach(ann=>{
+            const li = document.createElement('li');
+            const tm = document.createElement('time');
+            tm.textContent = new Date(ann.timestamp).toLocaleString('ru-RU', {
+              year:'numeric',month:'2-digit',day:'2-digit',
+              hour:'2-digit',minute:'2-digit'
+            });
+            li.append(tm, document.createTextNode(ann.text));
+            list.append(li);
+          });
+
+          updateStatistics(records.map(r=>r.gas_rate_fact));
+        } catch(e){
+          console.error(e);
+        }
+      }
+
+      // анимация «дорожки» за 60 секунд
+      document.getElementById('replayBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('replayBtn');
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/records/');
+          const data = await res.json();
+          const total = data.length;
+          if (!total) return btn.disabled = false;
+
+          // очистим график
+          gasChart.data.labels = [];
+          gasChart.data.datasets.forEach(ds=>ds.data = []);
+          gasChart.update();
+
+          const delay = 60000 / total;
+          let idx = 0;
+          const timer = setInterval(() => {
+            const rec = data[idx];
+            gasChart.data.labels.push(rec.datetime);
+            gasChart.data.datasets[0].data.push(rec.gas_rate_fact);
+            gasChart.data.datasets[1].data.push(rec.gas_rate_plan);
+            gasChart.update();
+            idx++;
+            if (idx >= total) {
+              clearInterval(timer);
+              btn.disabled = false;
+              updateStatistics(data.map(r=>r.gas_rate_fact));
+            }
+          }, delay);
+
+        } catch (err) {
+          console.error(err);
+          btn.disabled = false;
+        }
+      });
+
+      // отправка комментариев
+      document.getElementById('commentForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const txtEl = document.getElementById('commentInput');
+        const text = txtEl.value.trim();
+        if (!text) return;
+        await fetch('/api/annotations/', {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ text, timestamp: new Date().toISOString() })
+        });
+        txtEl.value = '';
+        updateData();
+      });
+
+      // первичная загрузка
+      updateData();
+      setInterval(updateData, 2000);
+    });
+  </script>
+</body>
+</html>
