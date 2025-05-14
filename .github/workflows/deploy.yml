@@ -27,6 +27,8 @@ jobs:
           SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
           SSH_PORT:     ${{ secrets.SSH_PORT }}
         run: |
+          TARGET_DIR="/var/www/www-***/python-opc-api"
+          
           sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -p "${SSH_PORT:-22}" \
             "$SSH_USER@$SSH_HOST" "mkdir -p $TARGET_DIR"
 
