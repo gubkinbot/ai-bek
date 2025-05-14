@@ -30,10 +30,9 @@ jobs:
           sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -p "${SSH_PORT:-22}" \
             "$SSH_USER@$SSH_HOST" "mkdir -p $TARGET_DIR"
 
-    # Тарим всё, кроме gas_monitor, и сразу распаковываем на сервере
           tar --exclude='./gas_monitor' -czf - . | \
             sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -p "${SSH_PORT:-22}" \
-              "$SSH_USER@$SSH_HOST" "tar -xzf - -C $TARGET_DIR
+              "$SSH_USER@$SSH_HOST" "tar -xzf - -C $TARGET_DIR"
 
       # 4. Устанавливаем зависимости и запускаем скрипт на сервере
       - name: Install deps & run service via password
