@@ -293,6 +293,33 @@
             fill: false,
             tension: 0.4,
             pointRadius: 0
+          },
+          {
+            label: 'V1',
+            data: [],
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--success-color'),
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0
+          },
+          {
+            label: 'V2',
+            data: [],
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--warning-color'),
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0
+          },
+          {
+            label: 'V3',
+            data: [],
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--danger-color'),
+            borderWidth: 2,
+            tension: 0.4,
+            fill: false,
+            pointRadius: 0
           }
         ]
       },
@@ -370,6 +397,9 @@
           gasChart.data.labels.push(r.datetime);
           gasChart.data.datasets[0].data.push(r.gas_rate_fact);
           gasChart.data.datasets[1].data.push(r.gas_rate_plan);
+          gasChart.data.datasets[2].data.push(r.gas_rate_v1);
+          gasChart.data.datasets[3].data.push(r.gas_rate_v2);
+          gasChart.data.datasets[4].data.push(r.gas_rate_v3);
           gasChart.update();
           idx++;
           if(idx>=n) {
@@ -385,7 +415,7 @@
     });
 
     updateData();
-    setInterval(updateData, 50);
+    setInterval(updateData, 2000);
   });
   </script>
 </body>

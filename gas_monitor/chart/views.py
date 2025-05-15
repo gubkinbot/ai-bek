@@ -11,13 +11,13 @@ from django.http import JsonResponse
 from .models import GasRecord
 
 def records_json(request):
-    qs = GasRecord.objects.order_by('-datetime')[:100]
+    qs = GasRecord.objects.order_by('-datetime')[:]
     data = []
     for rec in reversed(qs):
         # если datetime = None — пропустим или вернём пустую строку
         dt = rec.datetime.isoformat() if rec.datetime else ''
         data.append({
-            'datetime':      dt,
+            'datetime':      rec.datetime,
             'gas_rate_fact': rec.gas_rate_fact,
             'gas_rate_plan': rec.gas_rate_plan,
             'gas_rate_v1':   rec.gas_rate_v1,
