@@ -4,13 +4,13 @@ from datetime import datetime
 
 # 1) Открываем (или создаём) БД
 conn = sqlite3.connect('gas_monitor/db.sqlite3')
-cur = conn.cursor()
+cur  = conn.cursor()
 
 # 2) Создаём таблицу (если ещё нет)
 cur.execute('''
 CREATE TABLE IF NOT EXISTS chart_gasrecord (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    datetime             NOT NULL,
+    datetime         TEXT    NOT NULL,
     gas_rate_fact    REAL    NOT NULL,
     gas_rate_plan    REAL    NOT NULL,
     gas_rate_v1      REAL,
@@ -22,24 +22,35 @@ CREATE TABLE IF NOT EXISTS chart_gasrecord (
 # 3) Очищаем таблицу перед новой загрузкой
 cur.execute('DELETE FROM chart_gasrecord')
 
-# 4) Читаем CSV и готовим данные
+# 4) Функция-конвертер для чисел вида "0,00" или ""
+def to_float(s):
+    if not s:
+        return 0.0
+    s = s.strip().replace(',', '.')
+    return float(s)
+
+rows = []
 with open('final_df.csv', newline='', encoding='utf-8') as f:
     reader = csv.DictReader(f, delimiter=';')
     print("CSV headers:", reader.fieldnames)
 
-    rows = []
-    for row in reader:
-        # Исходная строка даты, например "08.03.2025 0:00"
-        raw_dt = row['datetime']  
-        # Парсим в datetime и сразу переводим в ISO 8601
-        dt_obj   = datetime.strptime(raw_dt, "%d.%m.%Y %H:%M")
-        iso_dt   = dt_obj.isoformat()
+    # запомним, если есть лишний пустой ключ
+    extra = '' if '' in reader.fieldnames else None
 
-        fact = float(row['gas_rate_fact'])
-        plan = float(row['gas_rate_plan'])
-        v1   = float(row.get('gas_rate_v1', 0) or 0)
-        v2   = float(row.get('gas_rate_v2', 0) or 0)
-        v3   = float(row.get('gas_rate_v3', 0) or 0)
+    for row in reader:
+        raw_dt = row.get('datetime', '').strip()
+        # парсим оба варианта даты
+        try:
+            dt_obj = datetime.fromisoformat(raw_dt)
+        except ValueError:
+            dt_obj = datetime.strptime(raw_dt, "%d.%m.%Y %H:%M")
+        iso_dt = dt_obj.isoformat()
+
+        fact = to_float(row.get('gas_rate_fact', ''))
+        plan = to_float(row.get('gas_rate_plan', ''))
+        v1   = to_float(row.get('gas_rate_v1',    ''))
+        v2   = to_float(row.get('gas_rate_v2',    ''))
+        v3   = to_float(row.get('gas_rate_v3',    ''))
 
         rows.append((iso_dt, fact, plan, v1, v2, v3))
 

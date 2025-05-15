@@ -385,7 +385,7 @@
         const data = await res.json();
         const n    = data.length;
         if (!n) { btn.disabled = false; return; }
-
+        
         gasChart.data.labels = [];
         gasChart.data.datasets.forEach(ds=>ds.data=[]);
         gasChart.update();
