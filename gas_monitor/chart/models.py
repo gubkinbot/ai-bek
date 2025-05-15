@@ -2,7 +2,7 @@ from django.db import models
 
 class GasRecord(models.Model):
     datetime       = models.DateTimeField()
-    gas_rate_fact  = models.FloatField()
+    gas_rate_fact  = models.FloatField(null=True, blank=True)
     gas_rate_plan  = models.FloatField()
     gas_rate_v1    = models.FloatField("Rate V1", null=True, blank=True)
     gas_rate_v2    = models.FloatField("Rate V2", null=True, blank=True)
